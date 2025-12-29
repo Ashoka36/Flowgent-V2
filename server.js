@@ -6,15 +6,13 @@ import multer from "multer";
 
 dotenv.config();
 
-// DEBUG CONFIRMATION (VISIBLE IN RENDER LOGS)
-console.log("🔥 Automation Super-Brain V2 server.js loaded");
+console.log("🔥 Automation Super-Brain V2 + UI loaded");
 
-// APP SETUP
 const app = express();
 const PORT = process.env.PORT || 3000;
 const upload = multer({ storage: multer.memoryStorage() });
 
-// MIDDLEWARE
+// middleware
 app.use(express.json({ limit: "5mb" }));
 app.use(
   rateLimit({
@@ -23,16 +21,94 @@ app.use(
   })
 );
 
-// ROOT (BROWSER-SAFE)
+// ---------------- UI ----------------
 app.get("/", (req, res) => {
-  res.status(200).send(
-    "Automation Super-Brain V2 is running. Use /health or POST /design"
-  );
+  res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Automation Super-Brain</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 40px;
+    }
+    h1 { color: #38bdf8; }
+    textarea, input {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      background: #020617;
+      color: #e5e7eb;
+      border: 1px solid #334155;
+      border-radius: 6px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 12px 20px;
+      background: #38bdf8;
+      color: #020617;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    pre {
+      background: #020617;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 6px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Automation Super-Brain</h1>
+
+<label>Describe your automation:</label>
+<textarea id="text" rows="6"></textarea>
+
+<label>Upload screenshots / diagrams (optional):</label>
+<input type="file" id="files" multiple />
+
+<button onclick="submitForm()">Generate Automation</button>
+
+<pre id="output"></pre>
+
+<script>
+async function submitForm() {
+  const formData = new FormData();
+  formData.append("text", document.getElementById("text").value);
+
+  const files = document.getElementById("files").files;
+  for (let f of files) {
+    formData.append("files", f);
+  }
+
+  document.getElementById("output").textContent = "Processing...";
+
+  const res = await fetch("/design", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+  document.getElementById("output").textContent =
+    JSON.stringify(data, null, 2);
+}
+</script>
+
+</body>
+</html>
+`);
 });
 
-// HEALTH (RENDER + DEBUG)
+// ---------------- HEALTH ----------------
 app.get("/health", (req, res) => {
-  res.status(200).json({
+  res.json({
     status: "ok",
     service: "automation-super-brain-v2",
     port: PORT,
@@ -41,7 +117,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-// OPTIONAL AUTH (AUTO-DISABLED IF ENVS MISSING)
+// ---------------- AUTH (OPTIONAL) ----------------
 function optionalAuth(req, res, next) {
   if (!process.env.OWNER_EMAIL || !process.env.JWT_SECRET) {
     return next();
@@ -61,30 +137,12 @@ function optionalAuth(req, res, next) {
   }
 }
 
-// LOGIN (ONLY ACTIVE IF AUTH ENABLED)
-app.post("/login", (req, res) => {
-  if (!process.env.OWNER_EMAIL || !process.env.JWT_SECRET) {
-    return res.status(400).json({ error: "Auth not enabled" });
-  }
-
-  const { email } = req.body;
-  if (email !== process.env.OWNER_EMAIL) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
-
-  const token = jwt.sign({ email }, process.env.JWT_SECRET, {
-    expiresIn: "15m"
-  });
-
-  res.json({ token });
-});
-
-// CORE AUTOMATION ENDPOINT
+// ---------------- CORE API ----------------
 app.post("/design", optionalAuth, upload.any(), (req, res) => {
   const textInput = req.body?.text || null;
   const files = req.files || [];
 
-  res.status(200).json({
+  res.json({
     received: {
       text: textInput,
       files: files.map(f => ({
@@ -102,14 +160,12 @@ app.post("/design", optionalAuth, upload.any(), (req, res) => {
   });
 });
 
-// CATCH-ALL (FAIL-PROOF, NO 404 EVER)
+// ---------------- CATCH ALL ----------------
 app.use((req, res) => {
-  res.status(200).send(
-    "Automation Super-Brain V2 active. Valid endpoints: /health, POST /design"
-  );
+  res.status(200).send("Automation Super-Brain running.");
 });
 
-// START
+// start
 app.listen(PORT, () => {
-  console.log(`🚀 Super-Brain V2 listening on port ${PORT}`);
+  console.log(`🚀 Super-Brain V2 + UI listening on port ${PORT}`);
 });
