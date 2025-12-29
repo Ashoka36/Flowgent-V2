@@ -1,0 +1,16 @@
+{
+  "name": "automation-super-brain-v2",
+  "version": "2.0.0",
+  "private": false,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.4.5",
+    "multer": "^1.4.5-lts.1"
+  }
+}
